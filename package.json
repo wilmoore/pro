@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "public": true,
   "bin": {
     "pro": "bin/pro"
   },
