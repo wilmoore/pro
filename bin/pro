@@ -104,7 +104,39 @@ process_tags() {
   echo "$combined_tags"
 }
 
-# DigitalOcean create logic
+# Format droplets for consistent table output
+format_droplets() {
+  local droplets="$1"
+  echo "$droplets" | awk '
+  BEGIN {
+    printf "%-10s %-20s %-15s %-10s %-30s\n", "ID", "Name", "PublicIPv4", "Region", "Tags";
+  }
+  NF >= 5 { # Only include rows with all fields present
+    printf "%-10s %-20s %-15s %-10s %-30s\n", $1, $2, $3, $4, $5;
+  }'
+}
+
+# Resolve private key based on provider
+resolve_private_key() {
+  local provider="$1"
+  local private_key="$2"
+
+  if [ -n "$private_key" ]; then
+    echo "$private_key"
+    return
+  fi
+
+  # Look for provider-specific key in ~/.ssh
+  local key
+  key=$(find "$HOME/.ssh" -name "*$provider*.pem" | head -n 1)
+
+  if [ -n "$key" ]; then
+    echo "$key"
+  else
+    echo "$HOME/.ssh/id_rsa"
+  fi
+}
+
 digitalocean_create() {
   local REPO=""
   local TAGS=""
@@ -116,7 +148,6 @@ digitalocean_create() {
       -n|--name) DROPLET_NAME="$2"; shift ;;
       -R|--region) REGION="$2"; shift ;;
       -s|--size) SIZE="$2"; shift ;;
-      -k|--private-key) PRIVATE_KEY="$2"; shift ;;
       --tags) TAGS="$2"; shift ;;
       -h|--help) usage; exit 0 ;;
       *) echo "Unknown option: $1"; usage; exit 1 ;;
@@ -131,12 +162,6 @@ digitalocean_create() {
   DROPLET_IMAGE="${DROPLET_IMAGE-$DEFAULT_DROPLET_IMAGE}"
   REGION="${REGION-$DEFAULT_REGION}"
   SIZE="${SIZE-$DEFAULT_SIZE}"
-  PRIVATE_KEY="${PRIVATE_KEY-$DEFAULT_PRIVATE_KEY}"
-
-  if [ ! -f "$PRIVATE_KEY" ]; then
-    echo "Error: Private key file '$PRIVATE_KEY' not found."
-    exit 1
-  fi
 
   # Process tags
   ALL_TAGS=$(process_tags "digitalocean" "$TAGS")
@@ -165,22 +190,40 @@ digitalocean_create() {
 # DigitalOcean list logic
 digitalocean_list() {
   echo "Listing DigitalOcean droplets with 'pro' tag..."
-  doctl compute droplet list --tag-name pro --format ID,Name,PublicIPv4,Memory,Region,Tags
+  local droplets
+  droplets=$(doctl compute droplet list --tag-name pro --format ID,Name,PublicIPv4,Region,Tags --no-header | grep -i "pro" | sed '/^\s*$/d')
+  format_droplets "$droplets"
 }
 
 # DigitalOcean SSH logic
 digitalocean_ssh() {
+  local PRIVATE_KEY=""
+  while [ "$#" -gt 0 ]; do
+    case $1 in
+      -k|--private-key) PRIVATE_KEY="$2"; shift ;;
+      -h|--help) usage; exit 0 ;;
+      *) echo "Unknown option: $1"; usage; exit 1 ;;
+    esac
+    shift
+  done
+
+  PRIVATE_KEY=$(resolve_private_key "digitalocean" "$PRIVATE_KEY")
+
   echo "Fetching droplets with 'pro' tag for SSH..."
   local droplets
-  droplets=$(doctl compute droplet list --tag-name pro --format ID,Name,PublicIPv4,Memory,Region,Tags --no-header)
+  droplets=$(doctl compute droplet list --tag-name pro --format ID,Name,PublicIPv4,Region,Tags --no-header | grep -i "pro" | sed '/^\s*$/d')
 
   if [ -z "$droplets" ]; then
     echo "No droplets with the 'pro' tag found."
     return 0
   fi
 
+  # Filter and format droplets
+  local formatted_droplets
+  formatted_droplets=$(format_droplets "$droplets")
+
   local selected
-  selected=$(echo "$droplets" | fzf --height=10 --reverse --prompt="Select a droplet: ")
+  selected=$(echo "$formatted_droplets" | fzf --header-lines=1 --height=10 --reverse --prompt="Select a droplet: ")
 
   if [ -z "$selected" ]; then
     echo "No droplet selected."
@@ -190,23 +233,27 @@ digitalocean_ssh() {
   local public_ipv4
   public_ipv4=$(echo "$selected" | awk '{print $3}')
 
-  echo "Connecting to $public_ipv4 via SSH..."
-  ssh -t -i "$DEFAULT_PRIVATE_KEY" root@"$public_ipv4"
+  echo "Connecting to $public_ipv4 via SSH with key $PRIVATE_KEY..."
+  ssh -t -i "$PRIVATE_KEY" root@"$public_ipv4"
 }
 
 # DigitalOcean destroy logic
 digitalocean_destroy() {
   echo "Fetching droplets with 'pro' tag for destruction..."
   local droplets
-  droplets=$(doctl compute droplet list --tag-name pro --format ID,Name,PublicIPv4 --no-header)
+  droplets=$(doctl compute droplet list --tag-name pro --format ID,Name,PublicIPv4,Region,Tags --no-header | grep -i "pro" | sed '/^\s*$/d')
 
   if [ -z "$droplets" ]; then
     echo "No droplets with the 'pro' tag found."
     return 0
   fi
 
+  # Filter and format droplets
+  local formatted_droplets
+  formatted_droplets=$(format_droplets "$droplets")
+
   local selected
-  selected=$(echo "$droplets" | fzf --height=10 --reverse --prompt="Select a droplet to destroy: ")
+  selected=$(echo "$formatted_droplets" | fzf --header-lines=1 --height=10 --reverse --prompt="Select a droplet to destroy: ")
 
   if [ -z "$selected" ]; then
     echo "No droplet selected."
@@ -228,7 +275,7 @@ pro_digitalocean() {
   case "$COMMAND" in
     create) digitalocean_create "$@" ;;
     list) digitalocean_list ;;
-    ssh) digitalocean_ssh ;;
+    ssh) digitalocean_ssh "$@" ;;
     destroy) digitalocean_destroy ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown command: $COMMAND"; usage; exit 1 ;;
