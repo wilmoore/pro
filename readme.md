@@ -1,7 +1,7 @@
-> PRO: Multi-Subcommand Provisioning Tool
+> **PRO**: Multi-Subcommand Provisioning Tool
 
 > [!TIP]
-> `digitalocean` is the only **platform** implemented currently.
+> `digitalocean` is the only **platform** currently implemented.
 
 ```sh
 Usage:
