@@ -1,5 +1,8 @@
 > PRO: Multi-Subcommand Provisioning Tool
 
+> [!TIP]
+> `digitalocean` is the only **platform** implemented currently.
+
 ```sh
 Usage:
   $0 [platform] [options]
@@ -70,6 +73,3 @@ Examples:
   $0 openstack ssh --name my-instance
   $0 openstack delete --name my-instance
 ```
-
-> [!TIP]
-> `digitalocean` is the only **platform** implemented currently.
