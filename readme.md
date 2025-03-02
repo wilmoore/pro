@@ -2,7 +2,7 @@
 
 ```sh
 Usage:
-  $0 [subcommand] [options]
+  $0 [platform] [options]
 
 Subcommands:
   digitalocean  Manage DigitalOcean droplets
@@ -70,3 +70,6 @@ Examples:
   $0 openstack ssh --name my-instance
   $0 openstack delete --name my-instance
 ```
+
+> [!TIP]
+> `digitalocean` is the only **platform** implemented currently.
