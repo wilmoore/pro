@@ -16,7 +16,7 @@ Supports multiple cloud providers including DigitalOcean, AWS, Azure, GCP, and O
 
 // Custom help function to separate commands
 func customHelpFunc(cmd *cobra.Command, args []string) {
-	fmt.Println("\n🚀 PRO CLI: Cloud Server Provisioning\n")
+	fmt.Println("🚀 PRO CLI: Cloud Server Provisioning")
 	fmt.Println("Usage:")
 	fmt.Printf("  %s [command]\n\n", cmd.Name())
 

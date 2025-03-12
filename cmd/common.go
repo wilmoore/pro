@@ -58,7 +58,8 @@ func getSSHKeys() string {
 	if err != nil {
 		log.Fatalf("Error fetching SSH keys: %v", err)
 	}
-	return strings.TrimSpace(strings.ReplaceAll(output, "\n", ","))
+	// Trim trailing comma
+	return strings.TrimRight(strings.TrimSpace(strings.ReplaceAll(output, "\n", ",")), ",")
 }
 
 // fzfSelect presents a list of options using fzf and returns the selected line
