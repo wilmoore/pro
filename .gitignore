@@ -1,0 +1,43 @@
+# Binaries and builds
+dist/
+bin/
+*.exe
+*.out
+*.app
+*.dll
+*.dmg
+*.so
+*.o
+*.a
+
+# Go dependencies and cache
+vendor/
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+*.test
+*.cover
+.coverprofile
+.idea/
+
+# Go module files (optional, but usually kept)
+# If using Go modules, remove these comments
+# go.sum
+
+# System-specific files
+.DS_Store
+Thumbs.db
+
+# Git & editor files
+.git/
+.vscode/
+*.iml
+*.sublime-workspace
+*.sublime-project
+
+# Goreleaser artifacts
+*.tar.gz
+*.zip
+builds/
